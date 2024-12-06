@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جدول الدراسة التفاعلي المبدع</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            light: '#4C51BF',
+                            DEFAULT: '#3730A3',
+                            dark: '#312E81',
+                        },
+                        secondary: {
+                            light: '#F687B3',
+                            DEFAULT: '#EC4899',
+                            dark: '#BE185D',
+                        },
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        [x-cloak] { display: none !important; }
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        .float { animation: float 3s ease-in-out infinite; }
+        .achievement-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+        @media (max-width: 768px) {
+            .achievement-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.5);
+            border-radius: 20px;
+        }
+    </style>
+</head>
+<body class="font-tajawal min-h-screen transition-colors duration-300" x-data="app()" x-init="initApp()" x-bind:class="{ 'dark': darkMode }" x-cloak>
+    <div class="bg-gray-100 dark:bg-gray-900 min-h-screen">
+        <div class="container mx-auto p-4 max-w-7xl">
+            <header class="mb-12 text-center">
+                <h1 class="text-5xl md:text-7xl font-bold mb-4 text-primary-dark dark:text-primary-light">جدول الدراسة التفاعلي المبدع</h1>
+                <p class="text-xl md:text-2xl text-gray-600 dark:text-gray-300">نظم دراستك بطريقة ممتعة ومبتكرة</p>
+            </header>
+            
+            <div class="mb-8 flex flex-wrap justify-center items-center gap-4">
+                <button @click="openAddSubjectModal()" class="bg-primary hover:bg-primary-dark text-white font-bold py-3 px-6 rounded-full transition duration-300 ease-in-out transform hover:scale-105 shadow-lg">
+                    إضافة مادة جديدة
+                </button>
+                <button @click="toggleDarkMode()" class="bg-secondary hover:bg-secondary-dark text-white font-bold py-3 px-6 rounded-full transition duration-300 ease-in-out transform hover:scale-105 shadow-lg">
+                    <span x-text="darkMode ? 'الوضع الفاتح' : 'الوضع الداكن'"></span>
+                </button>
+                <button @click="shareSchedule()" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full transition duration-300 ease-in-out transform hover:scale-105 shadow-lg">
+                    مشاركة الجدول
+                </button>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-hidden transition duration-300 ease-in-out mb-8">
+                <div class="overflow-x-auto">
+                    <table id="studyTable" class="w-full">
+                        <thead>
+                            <tr class="bg-gray-200 dark:bg-gray-700">
+                                <th class="py-4 px-6 text-right">المادة</th>
+                                <template x-for="day in days">
+                                    <th class="py-4 px-6 text-center" x-text="day"></th>
+                                </template>
+                                <th class="py-4 px-6 text-center">الأهداف</th>
+                                <th class="py-4 px-6 text-center">الملاحظات</th>
+                                <th class="py-4 px-6 text-center">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="(subject, index) in subjects" :key="index">
+                                <tr class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition duration-300">
+                                    <td class="py-4 px-6">
+                                        <span x-text="subject.name" class="font-semibold"></span>
+                                        <span x-text="'(' + subject.chapterCount + ' فصول)'" class="text-xs text-gray-500 dark:text-gray-400 ml-2"></span>
+                                    </td>
+                                    <template x-for="(day, dayIndex) in days" :key="dayIndex">
+                                        <td class="py-4 px-6 text-center">
+                                            <input type="checkbox" x-model="subject.schedule[dayIndex]" @change="updateSubject(index)" class="form-checkbox h-5 w-5 text-primary rounded focus:ring-primary-light focus:ring-opacity-25 transition duration-150 ease-in-out">
+                                        </td>
+                                    </template>
+                                    <td class="py-4 px-6 text-center">
+                                        <button @click="openGoalModal(index)" class="text-blue-500 hover:text-blue-600 transition duration-300">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                                            </svg>
+                                        </button>
+                                    </td>
+                                    <td class="py-4 px-6 text-center">
+                                        <button @click="openNoteModal(index)" class="text-green-500 hover:text-green-600 transition duration-300">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                            </svg>
+                                        </button>
+                                    </td>
+                                    <td class="py-4 px-6 text-center">
+                                        <button @click="toggleSubjectCompletion(index)" class="mr-2 text-yellow-500 hover:text-yellow-600 transition duration-300">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" :class="{'text-green-500': subject.completed}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        </button>
+                                        <button @click="removeSubject(index)" class="text-red-500 hover:text-red-600 transition duration-300">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-8 mb-8">
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 transition duration-300 ease-in-out transform hover:scale-105">
+                    <h2 class="text-3xl font-bold mb-4 text-primary-dark dark:text-primary-light">الإنجازات</h2>
+                    <div class="achievement-grid h-96 overflow-y-auto custom-scrollbar pr-2">
+                        <template x-for="achievement in achievements" :key="achievement.id">
+                            <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 transition duration-300 ease-in-out" :class="{'opacity-50': !achievement.unlocked, 'hover:bg-gray-200 dark:hover:bg-gray-600': achievement.unlocked}">
+                                <div class="flex items-center space-x-4 rtl:space-x-reverse">
+                                    <span x-text="achievement.icon" class="text-3xl"></span>
+                                    <div>
+                                        <span x-text="achievement.name" class="font-semibold block"></span>
+                                        <span x-text="achievement.description" class="text-xs text-gray-600 dark:text-gray-400"></span>
+                                    </div>
+                                    <span x-show="achievement.unlocked" class="ml-auto text-green-500 float">✓</span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 transition duration-300 ease-in-out transform hover:scale-105">
+                    <h2 class="text-3xl font-bold mb-4 text-primary-dark dark:text-primary-light">إحصائيات الدراسة</h2>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span>عدد المواد:</span>
+                            <span x-text="subjects.length" class="text-2xl font-bold text-secondary"></span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>عدد الأيام المدروسة:</span>
+                            <span x-text="getTotalStudyDays()" class="text-2xl font-bold text-secondary"></span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>نسبة الإنجاز:</span>
+                            <span x-text="getCompletionPercentage() + '%'" class="text-2xl font-bold text-secondary"></span>
+                        </div>
+                        <div class="mt-4">
+                            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4">
+                                <div class="bg-primary h-4 rounded-full transition-all duration-500 ease-out" :style="{ width: getCompletionPercentage() + '%' }"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 flex justify-center gap-4">
+                <button @click="downloadTable()" class="bg-primary hover:bg-primary-dark text-white font-bold py-3 px-6 rounded-full transition duration-300 ease-in-out transform hover:scale-105 shadow-lg">
+                    تحميل الجدول
+                </button>
+                <button @click="clearTable()" class="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-full transition duration-300 ease-in-out transform hover:scale-105 shadow-lg">
+                    مسح الجدول
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for adding new subject -->
+    <div x-show="showAddSubjectModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl max-w-md w-full m-4" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 transform scale-90" x-transition:enter-end="opacity-100 transform scale-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 transform scale-100" x-transition:leave-end="opacity-0 transform scale-90">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200">إضافة مادة جديدة</h2>
+            <form @submit.prevent="addSubject()">
+                <div class="mb-4">
+                    <label for="subjectName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">اختر المادة</label>
+                    <select id="subjectName" x-model="newSubject.name" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                        <template x-for="option in subjectOptions" :key="option">
+                            <option :value="option" x-text="option"></option>
+                        </template>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label for="chapterCount" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">عدد الفصول</label>
+                    <input type="number" id="chapterCount" x-model="newSubject.chapterCount" min="1" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">اختر الأيام</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <template x-for="(day, index) in days" :key="index">
+                            <label class="flex items-center">
+                                <input type="checkbox" x-model="newSubject.schedule[index]" class="mr-2 form-checkbox h-5 w-5 text-primary rounded focus:ring-primary focus:ring-opacity-25 transition duration-150 ease-in-out">
+                                <span x-text="day" class="text-gray-700 dark:text-gray-300"></span>
+                            </label>
+                        </template>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-4">
+                    <button type="button" @click="closeAddSubjectModal()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out">
+                        إلغاء
+                    </button>
+                    <button type="submit" class="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out">
+                        إضافة
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for setting goals -->
+    <div x-show="showGoalModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl max-w-md w-full m-4" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 transform scale-90" x-transition:enter-end="opacity-100 transform scale-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 transform scale-100" x-transition:leave-end="opacity-0 transform scale-90">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200">تحديد الأهداف</h2>
+            <form @submit.prevent="saveGoal()">
+                <div class="mb-4">
+                    <label for="goalDescription" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">وصف الهدف</label>
+                    <textarea id="goalDescription" x-model="currentGoal.description" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary" rows="3"></textarea>
+                </div>
+                <div class="mb-4">
+                    <label for="goalDeadline" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الموعد النهائي</label>
+                    <input type="date" id="goalDeadline" x-model="currentGoal.deadline" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                </div>
+                <div class="flex justify-end gap-4">
+                    <button type="button" @click="closeGoalModal()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out">
+                        إلغاء
+                    </button>
+                    <button type="submit" class="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out">
+                        حفظ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for adding notes -->
+    <div x-show="showNoteModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl max-w-md w-full m-4" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 transform scale-90" x-transition:enter-end="opacity-100 transform scale-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 transform scale-100" x-transition:leave-end="opacity-0 transform scale-90">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200">إضافة ملاحظات</h2>
+            <form @submit.prevent="saveNote()">
+                <div class="mb-4">
+                    <label for="noteContent" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الملاحظات</label>
+                    <textarea id="noteContent" x-model="currentNote" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary" rows="5"></textarea>
+                </div>
+                <div class="flex justify-end gap-4">
+                    <button type="button" @click="closeNoteModal()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out">
+                        إلغاء
+                    </button>
+                    <button type="submit" class="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out">
+                        حفظ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div x-show="notification.show" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 transform scale-90" x-transition:enter-end="opacity-100 transform scale-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 transform scale-100" x-transition:leave-end="opacity-0 transform scale-90" class="fixed bottom-5 right-5 bg-green-500 text-white p-4 rounded-lg shadow-lg" x-cloak>
+        <p x-text="notification.message"></p>
+    </div>
+    <footer class="mt-12 text-center text-gray-600 dark:bg-gray-800 text-gray-400">
+        <p>تم التطوير بواسطة Ahmed.R</p>
+        <p>للتواصل عبر واتساب: <a href="https://wa.me/201098662418" target="_blank" class="underline hover:text-primary">+201098662418</a></p>
+    </footer>
+
+    <script>
+        function app() {
+            return {
+                subjects: [],
+                subjectOptions: ['عربي', 'إنجليزي', 'فرنساوي', 'رياضيات', 'فيزياء', 'كيمياء', 'أحياء', 'جغرافيا', 'تاريخ', 'فلسفة'],
+                days: ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'],
+                achievements: [
+                    { id: 1, name: 'بداية رحلة التعلم', icon: '🌟', description: 'أضف مادة دراسية واحدة', unlocked: false },
+                    { id: 2, name: 'منظم محترف', icon: '📅', description: 'أضف 5 مواد دراسية', unlocked: false },
+                    { id: 3, name: 'طالب مثابر', icon: '🏆', description: 'سجل 50 يوم دراسة', unlocked: false },
+                    { id: 4, name: 'متعدد المواهب', icon: '🎭', description: 'أضف 7 مواد مختلفة', unlocked: false },
+                    { id: 5, name: 'دارس الأسبوع', icon: '📚', description: 'سجل دراسة لكل يوم في الأسبوع لمدة شهر', unlocked: false },
+                    { id: 6, name: 'ملك الرياضيات', icon: '🔢', description: 'سجل 100 يوم دراسة للرياضيات', unlocked: false },
+                    { id: 7, name: 'عالم اللغات', icon: '🗣️', description: 'أضف 3 لغات مختلفة للدراسة وسجل 50 يوم لكل منها', unlocked: false },
+                    { id: 8, name: 'باحث العلوم', icon: '🔬', description: 'سجل 200 يوم دراسة للفيزياء والكيمياء والأحياء مجتمعة', unlocked: false },
+                    { id: 9, name: 'مؤرخ بارع', icon: '🏛️', description: 'سجل 100 يوم دراسة للتاريخ', unlocked: false },
+                    { id: 10, name: 'فيلسوف صغير', icon: '🤔', description: 'سجل 100 يوم دراسة للفلسفة', unlocked: false },
+                    { id: 11, name: 'متفوق أكاديمي', icon: '🎓', description: 'أكمل جميع المواد بنسبة 100٪', unlocked: false },
+                    { id: 12, name: 'ملك التنظيم', icon: '📊', description: 'حدد أهداف لجميع المواد', unlocked: false },
+                    { id: 13, name: 'كاتب مبدع', icon: '✍️', description: 'أضف ملاحظات لـ 10 مواد مختلفة', unlocked: false },
+                    { id: 14, name: 'متعلم مستمر', icon: '🔄', description: 'استخدم التطبيق لمدة 30 يومًا متتالية', unlocked: false },
+                    { id: 15, name: 'مشارك فعال', icon: '🤝', description: 'شارك جدولك الدراسي 5 مرات', unlocked: false },
+                    // يمكن إضافة المزيد من الإنجازات هنا
+                ],
+                notification: {
+                    show: false,
+                    message: ''
+                },
+                showAddSubjectModal: false,
+                showGoalModal: false,
+                showNoteModal: false,
+                newSubject: {
+                    name: '',
+                    schedule: new Array(7).fill(false),
+                    chapterCount: 1,
+                    completed: false,
+                    goal: null,
+                    note: ''
+                },
+                currentGoal: {
+                    description: '',
+                    deadline: ''
+                },
+                currentNote: '',
+                currentSubjectIndex: null,
+                darkMode: false,
+                shareCount: 0,
+
+                initApp() {
+                    this.loadFromLocalStorage();
+                    this.checkAchievements();
+                    this.animateAchievements();
+                    this.loadDarkModePreference();
+                },
+
+                animateAchievements() {
+                    gsap.from(".achievement-grid > div", {
+                        opacity: 0,
+                        y: 20,
+                        stagger: 0.05,
+                        duration: 0.5,
+                        ease: "power2.out"
+                    });
+                },
+
+                openAddSubjectModal() {
+                    this.showAddSubjectModal = true;
+                    this.newSubject = {
+                        name: this.subjectOptions[0],
+                        schedule: new Array(7).fill(false),
+                        chapterCount: 1,
+                        completed: false,
+                        goal: null,
+                        note: ''
+                    };
+                },
+
+                closeAddSubjectModal() {
+                    this.showAddSubjectModal = false;
+                },
+
+                addSubject() {
+                    if (this.newSubject.schedule.some(day => day)) {
+                        this.subjects.push({...this.newSubject});
+                        this.saveToLocalStorage();
+                        this.showNotification('تمت إضافة مادة جديدة بنجاح!');
+                        this.checkAchievements();
+                        this.closeAddSubjectModal();
+                        this.animateNewSubject();
+                    } else {
+                        this.showNotification('يرجى اختيار يوم واحد على الأقل للدراسة');
+                    }
+                },
+
+                animateNewSubject() {
+                    gsap.from("#studyTable tr:last-child", {
+                        opacity: 0,
+                        y: 20,
+                        duration: 0.5,
+                        ease: "power2.out"
+                    });
+                },
+
+                removeSubject(index) {
+                    gsap.to(`#studyTable tr:nth-child(${index + 1})`, {
+                        opacity: 0,
+                        x: 20,
+                        duration: 0.3,
+                        onComplete: () => {
+                            this.subjects.splice(index, 1);
+                            this.saveToLocalStorage();
+                            this.showNotification('تم حذف المادة بنجاح!');
+                            this.checkAchievements();
+                        }
+                    });
+                },
+
+                updateSubject(index) {
+                    this.saveToLocalStorage();
+                    this.checkAchievements();
+                },
+
+                toggleSubjectCompletion(index) {
+                    this.subjects[index].completed = !this.subjects[index].completed;
+                    this.saveToLocalStorage();
+                    this.checkAchievements();
+                    this.showNotification(this.subjects[index].completed ? 'تم إكمال المادة!' : 'تم إلغاء إكمال المادة');
+                    this.animateCompletionToggle(index);
+                },
+
+                animateCompletionToggle(index) {
+                    gsap.from(`#studyTable tr:nth-child(${index + 1})`, {
+                        backgroundColor: this.subjects[index].completed ? "rgba(52, 211, 153, 0.2)" : "rgba(248, 113, 113, 0.2)",
+                        duration: 0.5,
+                        ease: "power2.out"
+                    });
+                },
+
+                openGoalModal(index) {
+                    this.currentSubjectIndex = index;
+                    this.currentGoal = this.subjects[index].goal || { description: '', deadline: '' };
+                    this.showGoalModal = true;
+                },
+
+                closeGoalModal() {
+                    this.showGoalModal = false;
+                },
+
+                saveGoal() {
+                    this.subjects[this.currentSubjectIndex].goal = { ...this.currentGoal };
+                    this.saveToLocalStorage();
+                    this.showNotification('تم حفظ الهدف بنجاح!');
+                    this.closeGoalModal();
+                    this.checkAchievements();
+                },
+
+                openNoteModal(index) {
+                    this.currentSubjectIndex = index;
+                    this.currentNote = this.subjects[index].note || '';
+                    this.showNoteModal = true;
+                },
+
+                closeNoteModal() {
+                    this.showNoteModal = false;
+                },
+
+                saveNote() {
+                    this.subjects[this.currentSubjectIndex].note = this.currentNote;
+                    this.saveToLocalStorage();
+                    this.showNotification('تم حفظ الملاحظة بنجاح!');
+                    this.closeNoteModal();
+                    this.checkAchievements();
+                },
+
+                saveToLocalStorage() {
+                    localStorage.setItem('studySchedule', JSON.stringify(this.subjects));
+                },
+
+                loadFromLocalStorage() {
+                    const savedData = localStorage.getItem('studySchedule');
+                    if (savedData) {
+                        this.subjects = JSON.parse(savedData);
+                    }
+                },
+
+                downloadTable() {
+                    let csvContent = "data:text/csv;charset=utf-8,";
+                    csvContent += "المادة," + this.days.join(",") + ",الحالة,عدد الفصول,الهدف,الموعد النهائي,الملاحظات\n";
+                    
+                    this.subjects.forEach(subject => {
+                        csvContent += subject.name + "," + 
+                                      subject.schedule.map(day => day ? "✓" : "").join(",") + "," + 
+                                      (subject.completed ? "مكتملة" : "غير مكتملة") + "," +
+                                      subject.chapterCount + "," +
+                                      (subject.goal ? subject.goal.description : "") + "," +
+                                      (subject.goal ? subject.goal.deadline : "") + "," +
+                                      subject.note + "\n";
+                    });
+
+                    const encodedUri = encodeURI(csvContent);
+                    const link = document.createElement("a");
+                    link.setAttribute("href", encodedUri);
+                    link.setAttribute("download", "جدول_الدراسة.csv");
+                    document.body.appendChild(link);
+                    link.click();
+                    this.showNotification('تم تحميل الجدول بنجاح!');
+                },
+
+                clearTable() {
+                    gsap.to("#studyTable tr", {
+                        opacity: 0,
+                        y: 20,
+                        stagger: 0.1,
+                        duration: 0.3,
+                        onComplete: () => {
+                            this.subjects = [];
+                            this.saveToLocalStorage();
+                            this.showNotification('تم مسح الجدول بنجاح!');
+                            this.checkAchievements();
+                        }
+                    });
+                },
+
+                checkAchievements() {
+                    // بداية رحلة التعلم
+                    if (this.subjects.length >= 1) this.unlockAchievement('بداية رحلة التعلم');
+                    
+                    // منظم محترف
+                    if (this.subjects.length >= 5) this.unlockAchievement('منظم محترف');
+                    
+                    // طالب مثابر
+                    if (this.getTotalStudyDays() >= 50) this.unlockAchievement('طالب مثابر');
+                    
+                    // متعدد المواهب
+                    if (new Set(this.subjects.map(s => s.name)).size >= 7) this.unlockAchievement('متعدد المواهب');
+                    
+                    // دارس الأسبوع
+                    if (this.hasStudiedEveryDayForAMonth()) this.unlockAchievement('دارس الأسبوع');
+                    
+                    // ملك الرياضيات
+                    if (this.getSubjectStudyDays('رياضيات') >= 100) this.unlockAchievement('ملك الرياضيات');
+                    
+                    // عالم اللغات
+                    if (this.hasStudiedThreeLanguages()) this.unlockAchievement('عالم اللغات');
+                    
+                    // باحث العلوم
+                    if (this.getTotalScienceDays() >= 200) this.unlockAchievement('باحث العلوم');
+                    
+                    // مؤرخ بارع
+                    if (this.getSubjectStudyDays('تاريخ') >= 100) this.unlockAchievement('مؤرخ بارع');
+                    
+                    // فيلسوف صغير
+                    if (this.getSubjectStudyDays('فلسفة') >= 100) this.unlockAchievement('فيلسوف صغير');
+                    
+                    // متفوق أكاديمي
+                    if (this.subjects.every(subject => subject.completed)) this.unlockAchievement('متفوق أكاديمي');
+                    
+                    // ملك التنظيم
+                    if (this.subjects.every(subject => subject.goal)) this.unlockAchievement('ملك التنظيم');
+                    
+                    // كاتب مبدع
+                    if (this.subjects.filter(subject => subject.note).length >= 10) this.unlockAchievement('كاتب مبدع');
+                    
+                    // مشارك فعال
+                    if (this.shareCount >= 5) this.unlockAchievement('مشارك فعال');
+                },
+
+                unlockAchievement(name) {
+                    const achievement = this.achievements.find(a => a.name === name);
+                    if (achievement && !achievement.unlocked) {
+                        achievement.unlocked = true;
+                        this.showNotification(`تم فتح إنجاز جديد: ${name}!`);
+                        this.saveAchievements();
+                        this.animateAchievementUnlock(achievement);
+                    }
+                },
+
+                animateAchievementUnlock(achievement) {
+                    gsap.from(`[data-achievement-id="${achievement.id}"]`, {
+                        scale: 1.2,
+                        rotation: 360,
+                        duration: 0.5,
+                        ease: "back.out(1.7)"
+                    });
+                },
+
+                showNotification(message) {
+                    this.notification.message = message;
+                    this.notification.show = true;
+                    setTimeout(() => {
+                        this.notification.show = false;
+                    }, 3000);
+                },
+
+                saveAchievements() {
+                    localStorage.setItem('achievements', JSON.stringify(this.achievements));
+                },
+
+                loadAchievements() {
+                    const savedAchievements = localStorage.getItem('achievements');
+                    if (savedAchievements) {
+                        this.achievements = JSON.parse(savedAchievements);
+                    }
+                },
+
+                getCompletionPercentage() {
+                    const totalSubjects = this.subjects.length;
+                    const completedSubjects = this.subjects.filter(subject => subject.completed).length;
+                    return totalSubjects > 0 ? Math.round((completedSubjects / totalSubjects) * 100) : 0;
+                },
+
+                getTotalStudyDays() {
+                    return this.subjects.reduce((total, subject) => 
+                        total + subject.schedule.filter(day => day).length, 0);
+                },
+
+                getSubjectStudyDays(subjectName) {
+                    const subject = this.subjects.find(s => s.name === subjectName);
+                    return subject ? subject.schedule.filter(day => day).length : 0;
+                },
+
+                getTotalScienceDays() {
+                    return ['فيزياء', 'كيمياء', 'أحياء'].reduce((total, subject) => 
+                        total + this.getSubjectStudyDays(subject), 0);
+                },
+
+                hasStudiedEveryDayForAMonth() {
+                    return this.subjects.some(subject => 
+                        subject.schedule.every(day => day) && this.getTotalStudyDays() >= 30);
+                },
+
+                hasStudiedThreeLanguages() {
+                    const languages = ['عربي', 'إنجليزي', 'فرنساوي'];
+                    return languages.filter(lang => 
+                        this.subjects.some(subject => subject.name === lang && this.getSubjectStudyDays(lang) >= 50)
+                    ).length >= 3;
+                },
+
+                toggleDarkMode() {
+                    this.darkMode = !this.darkMode;
+                    localStorage.setItem('darkMode', this.darkMode);
+                    if (this.darkMode) {
+                        document.documentElement.classList.add('dark');
+                    } else {
+                        document.documentElement.classList.remove('dark');
+                    }
+                },
+
+                loadDarkModePreference() {
+                    const savedDarkMode = localStorage.getItem('darkMode');
+                    if (savedDarkMode !== null) {
+                        this.darkMode = JSON.parse(savedDarkMode);
+                        if (this.darkMode) {
+                            document.documentElement.classList.add('dark');
+                        }
+                    }
+                },
+
+                shareSchedule() {
+                    // Here you would implement the actual sharing functionality
+                    // For now, we'll just increment the share count and show a notification
+                    this.shareCount++;
+                    localStorage.setItem('shareCount', this.shareCount);
+                    this.showNotification('تم مشاركة الجدول بنجاح!');
+                    this.checkAchievements();
+                },
+            }
+        }
+    </script>
+</body>
+</html>
+
